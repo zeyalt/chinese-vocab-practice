@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Zayyan 的生词夜空</title>
+<style>
+  :root{
+    --bg-deep:#0B1024;
+    --bg-mid:#131B3A;
+    --gold:#F0B429;
+    --gold-soft:#F6D374;
+    --correct:#3FB68B;
+    --correct-dark:#1E7A57;
+    --wrong:#E8604C;
+    --wrong-dark:#B23F2C;
+    --paper:#FBF7EC;
+    --ink:#1B2340;
+    --muted:#A3B0D6;
+    --muted-dim:#5A6796;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{font-size:17px;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 20% -10%, #24316B 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 110%, #1A2454 0%, transparent 50%),
+      linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 60%, var(--bg-deep) 100%);
+    font-family: "KaiTi","楷体","STKaiti","华文楷体","BiauKai","AR PL UKai CN","AR PL KaitiM GB","Noto Serif CJK SC","PingFang SC","Microsoft YaHei",serif;
+    color: var(--muted);
+    display:flex;
+    justify-content:center;
+    padding: 18px 12px 130px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  .stars{ position:fixed; inset:0; pointer-events:none; z-index:0; }
+  .stars span{
+    position:absolute; width:2px; height:2px; background:#fff; border-radius:50%;
+    opacity:.5; animation: twinkle 3.2s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:.15; transform:scale(1);}
+    50%{opacity:.9; transform:scale(1.6);}
+  }
+  @media (prefers-reduced-motion: reduce){ .stars span{animation:none; opacity:.4;} }
+
+  .app{ position:relative; z-index:1; width:100%; max-width:480px; }
+
+  header{ text-align:center; margin-bottom:14px; }
+  .eyebrow{
+    font-size:.78rem; letter-spacing:.2em; color:var(--gold-soft);
+    text-transform:uppercase; font-weight:700; margin-bottom:5px;
+  }
+  h1{ font-size:1.7rem; margin:0; color:#fff; font-weight:800; }
+  h1 .accent{ color: var(--gold); }
+  .sub{ font-size:.85rem; color:var(--muted); margin-top:5px; }
+
+  .constellation{ margin: 14px auto 12px; max-width: 360px; }
+  .constellation svg{ width:100%; height:50px; display:block; }
+  .const-label{ text-align:center; font-size:.72rem; color:var(--muted-dim); letter-spacing:.05em; margin-top:2px; }
+  .const-label b{ color: var(--gold-soft); font-weight:700; }
+
+  .controls-row{ display:flex; gap:8px; margin-bottom:10px; align-items:center; }
+  select.lesson-select{
+    flex:1; background:rgba(255,255,255,0.05); color:#fff; border:1px solid #2C3768;
+    border-radius:12px; padding:11px 10px; font-size:.95rem; font-weight:600;
+    font-family:inherit; -webkit-appearance:none; appearance:none;
+  }
+  .diff-row{ display:flex; gap:6px; margin-bottom:14px; }
+  .diff-pill{
+    flex:1; border:1px solid #2C3768; background:rgba(255,255,255,0.03);
+    color:var(--muted); font-size:.82rem; padding:9px 6px; border-radius:999px;
+    cursor:pointer; font-weight:700; text-align:center;
+  }
+  .diff-pill.active{ background: var(--gold); border-color:var(--gold); color:#221806; }
+
+  .scorebar{ display:flex; justify-content:center; gap:20px; margin-bottom:14px; font-size:.82rem; color:var(--muted); }
+  .scorebar .metric{ text-align:center; }
+  .scorebar .num{ display:block; font-size:1.3rem; font-weight:800; color:#fff; }
+  .scorebar .num.streak{ color: var(--gold); }
+
+  .card{
+    background: var(--paper); border-radius: 20px; padding: 22px 18px 20px;
+    box-shadow: 0 20px 45px -12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,0.04);
+    position:relative;
+  }
+  .card::before{
+    content:""; position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    width:34px; height:14px; border-radius:14px 14px 0 0;
+    background: linear-gradient(180deg,#3a4680,#28315e);
+  }
+  .tagrow{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap; }
+  .lesson-chip{
+    font-size:.72rem; font-weight:800; color:#fff; background:#3a4680;
+    padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .qtype{
+    font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    color:#B98A2E;
+  }
+  .sentence{
+    font-size:1.62rem; line-height:1.75; color: var(--ink); font-weight:500;
+    margin-bottom: 4px; word-break: break-word;
+  }
+  .sentence .target{ border-bottom: 3px solid var(--gold); font-weight:700; padding: 0 1px; }
+  .sentence .blank{
+    display:inline-block; min-width: 2.6em; border-bottom: 2.5px dashed #C9BFA0;
+    text-align:center; color:#B98A2E; font-weight:800;
+  }
+  .sentence .pinyincue{ color:#B98A2E; font-weight:700; font-family: "Segoe UI","Helvetica Neue","Arial",sans-serif; }
+  .pinyin{ font-family: "Segoe UI","Helvetica Neue","Arial",sans-serif !important; letter-spacing:.02em; }
+  .instruction{ font-size:.85rem; color:#8B7F5E; margin: 8px 0 16px; }
+
+  .options{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .options.six{ grid-template-columns: 1fr 1fr; }
+  .opt{
+    background:#fff; border:2.5px solid #E7DFC7; border-radius:14px;
+    padding:15px 10px; font-size:1.12rem; font-weight:500; color:var(--ink);
+    cursor:pointer; transition: all .12s ease; text-align:center; font-family: inherit;
+    min-height:52px;
+  }
+  .opt.selected{ border-color: var(--ink); background:#F3EFE0; }
+  .opt:disabled{ cursor:default; }
+  .opt.correct{ background: #E6F7F0; border-color: var(--correct); color:var(--correct-dark); }
+  .opt.wrong{ background: #FCEAE6; border-color: var(--wrong); color:var(--wrong-dark); }
+  .opt.dim{ opacity:.4; }
+
+  /* reorder tokens */
+  .answerzone{
+    min-height:56px; border:2.5px dashed #D9D0B4; border-radius:14px; padding:10px;
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:flex-start;
+  }
+  .bank{ display:flex; flex-wrap:wrap; gap:8px; }
+  .tok{
+    background:#fff; border:2px solid #E7DFC7; border-radius:10px;
+    padding:9px 12px; font-size:1.05rem; font-weight:500; color:var(--ink); cursor:pointer;
+  }
+  .tok.placed{ background:#F3EFE0; border-color: var(--ink); }
+  .tok.tokcorrect{ background:#E6F7F0; border-color:var(--correct); color:var(--correct-dark); }
+  .tok.tokwrong{ background:#FCEAE6; border-color:var(--wrong); color:var(--wrong-dark); }
+
+  .typebox{
+    width:100%; font-size:1.2rem; padding:14px; border-radius:12px; border:2.5px solid #E7DFC7;
+    font-family: inherit; color:var(--ink); margin-bottom:14px; font-weight:700;
+    text-transform:lowercase;
+  }
+  .typebox:focus{ outline:none; border-color:var(--ink); }
+  .typehint{ font-size:.78rem; color:#8B7F5E; margin:-8px 0 14px; }
+
+  .correctref{
+    font-size:.85rem; color:#8B7F5E; margin-top:2px;
+  }
+
+  /* bottom action bar, duolingo style */
+  .bottombar{
+    position:fixed; left:0; right:0; bottom:0; z-index:5;
+    background: var(--paper);
+    border-top:1px solid #E6DFCB;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 30px rgba(0,0,0,.35);
+  }
+  .bb-inner{ max-width:480px; margin:0 auto; }
+  .feedback{
+    font-size:.98rem; line-height:1.5; margin-bottom:10px; display:none; font-weight:700;
+  }
+  .feedback.show{ display:block; }
+  .feedback.ok{ color: var(--correct-dark); }
+  .feedback.no{ color: var(--wrong-dark); }
+  .feedback .meaning{ display:block; font-weight:500; color:#6b6450; margin-top:3px; font-size:.85rem; }
+
+  .bb-buttons{ display:flex; gap:10px; }
+  .btn{
+    flex:1; padding:15px; border-radius:14px; border:none; font-size:1.05rem;
+    font-weight:800; cursor:pointer; font-family:inherit;
+  }
+  .btn.primary{ background: var(--ink); color:#fff; }
+  .btn.primary:disabled{ background:#D8D2BE; color:#a39c86; cursor:not-allowed; }
+  .btn.primary.ok{ background: var(--correct-dark); }
+  .btn.primary.no{ background: var(--wrong-dark); }
+  .btn.skip{ background:#EFEADA; color:#8B7F5E; flex:0 0 92px; }
+
+  .statsbar{
+    text-align:center; font-size:.82rem; color:var(--muted); margin-bottom:14px;
+    padding:8px 12px; background:rgba(255,255,255,0.04); border-radius:12px;
+  }
+  .statsbar b{ color:#fff; }
+
+  .review-panel{
+    background: var(--paper); border-radius:20px; padding:22px 18px;
+    box-shadow: 0 20px 45px -12px rgba(0,0,0,.55);
+  }
+  .review-title{
+    font-size:1.2rem; font-weight:800; color:var(--ink); margin-bottom:14px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .review-back{
+    font-size:.88rem; color:#8B7F5E; cursor:pointer; font-weight:700;
+    background:#EFEADA; border:none; padding:8px 14px; border-radius:10px;
+    font-family:inherit;
+  }
+  .review-item{
+    border-bottom:1px solid #E7DFC7; padding:12px 0; display:flex;
+    justify-content:space-between; align-items:flex-start; gap:10px;
+  }
+  .review-item:last-child{ border-bottom:none; }
+  .review-word{ font-size:1.2rem; font-weight:700; color:var(--ink); }
+  .review-py{ font-size:.85rem; color:#8B7F5E; font-family:"Segoe UI","Helvetica Neue","Arial",sans-serif; }
+  .review-meaning{ font-size:.82rem; color:#8B7F5E; }
+  .review-meta{ text-align:right; white-space:nowrap; }
+  .review-count{ font-size:.78rem; color:var(--wrong-dark); font-weight:700; }
+  .review-lesson{ font-size:.7rem; color:#8B7F5E; }
+  .review-clear{
+    margin-top:14px; width:100%; padding:12px; border-radius:12px; border:none;
+    font-size:.92rem; font-weight:700; cursor:pointer; font-family:inherit;
+    background:#FCEAE6; color:var(--wrong-dark);
+  }
+  .review-empty{ text-align:center; color:#8B7F5E; padding:30px 0; font-size:.95rem; }
+
+  footer{ text-align:center; margin-top:20px; font-size:.7rem; color:var(--muted-dim); }
+</style>
+</head>
+<body>
+<div class="stars" id="starfield"></div>
+
+<div class="app">
+  <header>
+    <div class="eyebrow">华文生词练习</div>
+    <h1>Zayyan 的<span class="accent">生词夜空</span></h1>
+    <div class="sub">选好答案后按「检查」，答对就点亮一颗星星 ✨</div>
+  </header>
+
+  <div class="constellation">
+    <svg id="constSvg" viewBox="0 0 360 50"></svg>
+    <div class="const-label">本轮已点亮 <b id="constCount">0</b> / 8 颗星</div>
+  </div>
+
+  <div class="controls-row">
+    <select class="lesson-select" id="lessonSelect"></select>
+  </div>
+  <div class="diff-row" id="diffRow"></div>
+
+  <div class="statsbar" id="statsBar">正确率 <b>0%</b> (0/0)</div>
+
+  <div class="scorebar">
+    <div class="metric"><span class="num" id="scoreNum">0</span>答对</div>
+    <div class="metric"><span class="num" id="totalNum">0</span>已作答</div>
+    <div class="metric"><span class="num streak" id="streakNum">0</span>连续答对</div>
+  </div>
+
+  <div id="practiceView">
+    <div class="card">
+      <div class="tagrow">
+        <span class="lesson-chip" id="lessonChip">第1课</span>
+        <span class="qtype" id="qType">拼音选择</span>
+      </div>
+      <div class="sentence" id="sentence"></div>
+      <div class="instruction" id="instruction"></div>
+      <div id="qbody"></div>
+    </div>
+  </div>
+
+  <div id="reviewView" style="display:none;"></div>
+
+  <footer>词语取自华文课本第 1–25 课 · 加油，Zayyan！</footer>
+</div>
+
+<div class="bottombar">
+  <div class="bb-inner">
+    <div class="feedback" id="feedback"></div>
+    <div class="bb-buttons">
+      <button class="btn skip" id="skipBtn">跳过</button>
+      <button class="btn primary" id="actionBtn" disabled>检查</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   VOCAB DATA
+   ============================================================ */
+const VOCAB = [
+// ---- Lesson 1 ----
+{w:'拜年', py:'bài nián', m:'pay a New Year visit', s:'我和妹妹拿着两个柑，高高兴兴地给外公外婆拜年。', l:'1', diff:'easy'},
+{w:'贴', py:'tiē', m:'stick / paste', s:'新年快到了，二年级甲班的同学们在课室的墙上贴了一个大大的"春"字。', l:'1', diff:'easy'},
+{w:'平安', py:'píng ān', m:'safe and sound', s:'爸爸妈妈希望我和弟弟能平安、健康地长大。', l:'1', diff:'easy'},
+{w:'神奇', py:'shén qí', m:'magical / miraculous', s:'龙有蛇的身体，狮子的头，鹿的角，兔子的眼睛和牛的耳朵，真是太神奇了。', l:'1', diff:'medium'},
+{w:'年年有余', py:'nián nián yǒu yú', m:'may abundance be with you every year', s:'奶奶用红纸剪了两条鱼贴在窗上，祝全家年年有余。', l:'1', diff:'medium'},
+{w:'吉利', py:'jí lì', m:'auspicious / lucky', s:'对华人来说，红色代表好运和喜庆，是吉利的颜色。', l:'1', diff:'medium'},
+{w:'卷', py:'juǎn', m:'roll up', s:'我和立明一起把那张大大的纸卷了起来。', l:'1', diff:'easy'},
+{w:'大扫除', py:'dà sǎo chú', m:'spring cleaning', s:'新年前，我和家人一起大扫除，我们齐心协力，把家里打扫得干干净净。', l:'1', diff:'easy',
+  chunks:['新年前，','我和家人','一起大扫除，','我们齐心协力，','把家里','打扫得','干干净净。']},
+{w:'试一试', py:'shì yi shì', m:'give it a try', s:'买新校服前，爸爸让弟弟先试一试。', l:'1', diff:'easy'},
+{w:'合适', py:'hé shì', m:'suitable / fitting', s:'这条裤子不长也不短，弟弟穿起来很合适。', l:'1', diff:'medium'},
+{w:'机会', py:'jī huì', m:'opportunity', s:'老师要我抓住机会，参加一年一次的作文比赛。', l:'1', diff:'medium'},
+{w:'专心', py:'zhuān xīn', m:'attentive / focused', s:'上课时，我们要专心地听讲，也要认真地回答问题。', l:'1', diff:'medium'},
+{w:'折', py:'zhé', m:'fold', s:'爸爸折的纸飞机不但好看，还能飞得又高又远。', l:'1', diff:'easy'},
+{w:'现在', py:'xiàn zài', m:'now', s:'这里过去是空地，现在是一所学校。', l:'1', diff:'easy'},
+{w:'幸福', py:'xìng fú', m:'happy / blessed', s:'我每天都能吃到妈妈做的可口的饭菜，真幸福啊！', l:'1', diff:'medium'},
+
+// ---- Lesson 3 ----
+{w:'然后', py:'rán hòu', m:'after that', s:'我先把功课做完，然后才陪爷爷看电视。', l:'3', diff:'easy'},
+{w:'特别', py:'tè bié', m:'especially / special', s:'新年到了，丽美穿上妈妈送给她的新衣服，特别漂亮。', l:'3', diff:'medium'},
+{w:'一定', py:'yí dìng', m:'certainly', s:'妈妈做的饭菜非常好吃，客人一定会喜欢。', l:'3', diff:'easy'},
+{w:'各自', py:'gè zì', m:'each on their own', s:'放学后，同学们背上书包，各自回家了。', l:'3', diff:'medium'},
+{w:'独自', py:'dú zì', m:'alone / by oneself', s:'星期天，父母都出门了，我独自在家写作业。', l:'3', diff:'medium'},
+{w:'递给', py:'dì gěi', m:'hand over to', s:'老师把作业本递给我，我连忙接了过来。', l:'3', diff:'easy',
+  chunks:['老师','把作业本','递给我，','我','连忙','接了过来。']},
+{w:'尝', py:'cháng', m:'taste', s:'这是妈妈做的新口味的蛋糕，你来尝一下吧。', l:'3', diff:'easy'},
+{w:'伸出', py:'shēn chū', m:'stretch out', s:'每当朋友遇到困难，姐姐都会主动伸出援手。', l:'3', diff:'medium'},
+{w:'扔', py:'rēng', m:'throw', s:'顽皮的子华向水池里的乌龟扔石头，被老师教训了一顿。', l:'3', diff:'easy'},
+{w:'手忙脚乱', py:'shǒu máng jiǎo luàn', m:'flustered, in a rush', s:'弟弟上学快迟到了，他手忙脚乱地穿上校服，冲出家门。', l:'3', diff:'hard'},
+{w:'原来', py:'yuán lái', m:'it turns out / originally', s:'我的华文书不见了，问了小明才知道，原来被小美拿走了。', l:'3', diff:'medium'},
+{w:'挑食', py:'tiāo shí', m:'picky about food', s:'吃饭时，我们不能挑食，这样身体才会健康。', l:'3', diff:'easy'},
+{w:'从', py:'cóng', m:'from', s:'弟弟从口袋里拿出几颗糖果递给我，说：姐姐，这些糖果好吃极了，你快尝尝！', l:'3', diff:'easy'},
+{w:'三角形', py:'sān jiǎo xíng', m:'triangle', s:'过八岁生日的时候，叔叔送给我一只三角形的手表。', l:'3', diff:'easy',
+  chunks:['过八岁生日的时候，','叔叔','送给我','一只','三角形的手表。']},
+{w:'众人', py:'zhòng rén', m:'everyone / the crowd', s:'只要众人一条心，就一定能完成这个任务。', l:'3', diff:'medium'},
+{w:'一共', py:'yí gòng', m:'altogether / in total', s:'今年学校举行的画画比赛，一共有八十多个同学报名参加。', l:'3', diff:'easy'},
+{w:'凉爽', py:'liáng shuǎng', m:'cool (weather)', s:'早上，天气非常凉爽，我和爸爸一起去公园跑步。', l:'3', diff:'easy'},
+
+// ---- Lesson 7 ----
+{w:'照', py:'zhào', m:'shine on', s:'清晨的阳光照着小草上的露珠，露珠亮晶晶的，美丽极了。', l:'7', diff:'easy'},
+{w:'行人', py:'xíng rén', m:'pedestrian', s:'天色渐渐暗了下来，路上的行人越来越少。', l:'7', diff:'easy'},
+{w:'才', py:'cái', m:'only then', s:'搭地铁时，我们要等车厢里面的乘客下车后，才可以上车。', l:'7', diff:'medium'},
+{w:'应该', py:'yīng gāi', m:'should', s:'我们应该等绿灯亮了再过马路，这样才安全。', l:'7', diff:'medium'},
+{w:'等', py:'děng', m:'wait', s:'我在组屋楼下等电梯时，遇见了邻居王阿姨。', l:'7', diff:'easy'},
+{w:'停', py:'tíng', m:'stop / park', s:'爸爸把车子停在停车场，然后就去公园跑步。', l:'7', diff:'easy'},
+{w:'互相', py:'hù xiāng', m:'each other / mutually', s:'同学之间应该相亲相爱，互相帮助。', l:'7', diff:'medium'},
+{w:'来得及', py:'lái de jí', m:'there is still time', s:'哥哥刚出门不久，你现在去追他还来得及。', l:'7', diff:'medium'},
+{w:'已经', py:'yǐ jīng', m:'already', s:'爸爸回到家的时候，妈妈已经把晚餐煮好了。', l:'7', diff:'easy'},
+{w:'向', py:'xiàng', m:'towards', s:'你向前走，然后上二楼，就到音乐室了。', l:'7', diff:'easy'},
+{w:'往', py:'wǎng', m:'towards', s:'弟弟站在路口，不知道要往左边走，还是往右边走。', l:'7', diff:'easy'},
+{w:'转', py:'zhuǎn', m:'turn', s:'你走到前面的路口，再向右转，就看到巴士站了。', l:'7', diff:'easy',
+  chunks:['你','走到','前面的路口，','再','向右转，','就看到','巴士站了。']},
+{w:'迷路', py:'mí lù', m:'lose the way', s:'小文在树林里迷路了，他又急又怕，大哭起来。', l:'7', diff:'easy',
+  chunks:['小文','在树林里','迷路了，','他','又急又怕，','大哭起来。']},
+{w:'旁边', py:'páng biān', m:'beside', s:'操场旁边的草丛里开了许多小黄花，美丽极了。', l:'7', diff:'easy'},
+{w:'顶楼', py:'dǐng lóu', m:'rooftop / top floor', s:'王叔叔住在这座组屋的顶楼，他每天都搭电梯上下楼。', l:'7', diff:'easy'},
+{w:'仔细', py:'zǐ xì', m:'careful', s:'答完考卷后，我会再仔细地检查一遍。', l:'7', diff:'medium'},
+{w:'明亮', py:'míng liàng', m:'bright / brightly lit', s:'同学们在又宽敞又明亮的教室里上课，真幸福。', l:'7', diff:'medium'},
+
+// ---- Lesson 8 ----
+{w:'建', py:'jiàn', m:'build', s:'王叔叔是建筑师，他和建筑工人们一起建高楼，让大家都有房子住。', l:'8', diff:'easy'},
+{w:'火灾', py:'huǒ zāi', m:'fire disaster', s:'小明看见陈叔叔家发生了火灾，连忙打电话召消防车。', l:'8', diff:'easy',
+  chunks:['小明','看见','陈叔叔家','发生了火灾，','连忙','打电话','召消防车。']},
+{w:'保护', py:'bǎo hù', m:'protect', s:'我们应该保护眼睛，不要在光线暗的地方看书。', l:'8', diff:'easy'},
+{w:'扑灭', py:'pū miè', m:'extinguish', s:'在消防员的努力下，大火终于被扑灭了。', l:'8', diff:'medium'},
+{w:'教', py:'jiāo', m:'teach', s:'林老师坐在我旁边，耐心地教我做手工。', l:'8', diff:'easy'},
+{w:'欢迎', py:'huān yíng', m:'welcome', s:'这种水果蛋糕既好看又好吃，受到了顾客的欢迎。', l:'8', diff:'easy'},
+{w:'温暖', py:'wēn nuǎn', m:'warm', s:'清晨，阳光照进我的房间，让我觉得好温暖。', l:'8', diff:'easy'},
+{w:'闻', py:'wén', m:'smell', s:'我一进门就闻到烧鸡的香味，顿时口水直流。', l:'8', diff:'easy'},
+{w:'阵阵', py:'zhèn zhèn', m:'bursts / waves of', s:'风儿轻轻吹过，窗外飘来阵阵花香。', l:'8', diff:'medium'},
+{w:'分工合作', py:'fēn gōng hé zuò', m:'divide the work and cooperate', s:'同学们分工合作，不一会儿就把课室打扫干净了。', l:'8', diff:'medium'},
+{w:'座位', py:'zuò wèi', m:'seat', s:'看到老奶奶上了巴士，我马上把座位让给她。', l:'8', diff:'easy',
+  chunks:['看到','老奶奶','上了巴士，','我','马上','把座位','让给她。']},
+{w:'碰到', py:'pèng dào', m:'bump into', s:'早上，我在上学的路上碰到了同班同学立华。', l:'8', diff:'easy'},
+{w:'防止', py:'fáng zhǐ', m:'prevent', s:'为了防止火灾发生，我们不应该玩火。', l:'8', diff:'medium'},
+{w:'照顾', py:'zhào gù', m:'take care of', s:'王阿姨是护士，她会细心地照顾病人。', l:'8', diff:'easy'},
+{w:'懂事', py:'dǒng shì', m:'sensible / obedient', s:'弟弟很懂事，吃完饭会主动洗碗。', l:'8', diff:'easy'},
+{w:'加油', py:'jiā yóu', m:'cheer on / add oil', s:'比赛开始了，我们在观众席上为运动员加油。', l:'8', diff:'easy'},
+{w:'冰凉', py:'bīng liáng', m:'ice-cold', s:'天气太热了，我好想喝一杯冰凉的汽水。', l:'8', diff:'easy'},
+{w:'种', py:'zhòng', m:'plant / grow', s:'我们的校园里种了很多花草树木，美丽极了。', l:'8', diff:'easy'},
+
+// ---- Lesson 12 ----
+{w:'乌云密布', py:'wū yún mì bù', m:'dark clouds gather', s:'天空乌云密布，天色渐渐暗下来，马上就要下雨了。', l:'12', diff:'medium'},
+{w:'电闪雷鸣', py:'diàn shǎn léi míng', m:'lightning flashes and thunder roars', s:'窗外电闪雷鸣，不一会儿就下起了倾盆大雨。', l:'12', diff:'medium'},
+{w:'窗户', py:'chuāng hu', m:'window', s:'要下雨了，我急忙把窗户关好。', l:'12', diff:'easy'},
+{w:'越来越', py:'yuè lái yuè', m:'more and more', s:'雨下得越来越大，路上的行人越来越少。', l:'12', diff:'medium'},
+{w:'忘记', py:'wàng jì', m:'forget', s:'出门前，姐姐提醒我不要忘记带水壶。', l:'12', diff:'easy'},
+{w:'池塘', py:'chí táng', m:'pond', s:'池塘里养了几条美丽的鲤鱼，吸引了很多人前来观赏。', l:'12', diff:'easy',
+  chunks:['池塘里','养了','几条美丽的鲤鱼，','吸引了','很多人','前来观赏。']},
+{w:'挂', py:'guà', m:'hang', s:'夜晚，一轮明月挂在天空，银白色的月光洒在海面上，漂亮极了。', l:'12', diff:'easy'},
+{w:'淋湿', py:'lín shī', m:'soaked / drenched', s:'哥哥冒雨跑回家，全身都淋湿了。', l:'12', diff:'medium'},
+{w:'好像', py:'hǎo xiàng', m:'seem like', s:'弟弟的脸红红的，手脚冰凉，好像生病了。', l:'12', diff:'medium'},
+{w:'花丛', py:'huā cóng', m:'cluster of flowers', s:'公园里的花都开了，几只蜜蜂在花丛中飞来飞去，忙着采蜜。', l:'12', diff:'easy'},
+{w:'结', py:'jiē', m:'bear (fruit)', s:'奶奶种的小树长大了，结出很多甜甜的果子。', l:'12', diff:'easy'},
+{w:'掉', py:'diào', m:'fall / drop', s:'大风一吹，枯黄的叶子纷纷从树上掉了下来。', l:'12', diff:'easy',
+  chunks:['大风一吹，','枯黄的叶子','纷纷','从树上','掉了下来。']},
+{w:'响', py:'xiǎng', m:'ring / sound', s:'下课铃声响了，同学们走出课室，他们有的去图书馆借书，有的去食堂吃东西。', l:'12', diff:'easy'},
+{w:'害虫', py:'hài chóng', m:'pest', s:'啄木鸟把树干里的害虫捉出来，保护大树。', l:'12', diff:'easy'},
+{w:'事情', py:'shì qing', m:'matter / thing', s:'去年发生的那件事情，我一直记在心里，难以忘记。', l:'12', diff:'easy'},
+{w:'让', py:'ràng', m:'let / allow', s:'今天的天气很热，妈妈让我去楼下的咖啡店买两杯冰奶茶。', l:'12', diff:'easy'},
+{w:'刮风', py:'guā fēng', m:'windy', s:'不管刮风还是下雨，文华总是会准时到学校上课。', l:'12', diff:'easy'},
+{w:'摸', py:'mō', m:'touch', s:'看到弟弟给老爷爷让座，妈妈摸着弟弟的头，笑着说：你真是个懂事的好孩子。', l:'12', diff:'easy'},
+
+// ---- Lesson 23 ----
+{w:'跟', py:'gēn', m:'with / follow', s:'吃完晚饭，我跟弟弟在客厅玩五石子。', l:'23', diff:'easy'},
+{w:'活动', py:'huó dòng', m:'activity', s:'国庆日快到了，学校举办了许多有趣的庆祝活动。', l:'23', diff:'easy'},
+{w:'许多', py:'xǔ duō', m:'many / a lot of', s:'休息时间，许多同学在操场上玩游戏。', l:'23', diff:'easy'},
+{w:'可惜', py:'kě xī', m:'a pity', s:'那场舞狮表演非常精彩，你错过了真可惜。', l:'23', diff:'medium'},
+{w:'更', py:'gèng', m:'even more', s:'丽丽把头发剪短以后，大家都觉得她比以前更好看了。', l:'23', diff:'easy'},
+{w:'幸运', py:'xìng yùn', m:'lucky', s:'能在家人的爱和关怀下慢慢长大，我觉得自己很幸运。', l:'23', diff:'medium'},
+{w:'许愿', py:'xǔ yuàn', m:'make a wish', s:'我闭上眼睛，在心中许愿，愿家人身体健康，永远快乐。', l:'23', diff:'medium',
+  chunks:['我','闭上眼睛，','在心中许愿，','愿家人','身体健康，','永远快乐。']},
+{w:'永远', py:'yǒng yuǎn', m:'forever', s:'父母的爱就像阳光，永远温暖着我的心。', l:'23', diff:'medium'},
+{w:'年轻', py:'nián qīng', m:'young', s:'我们的华文老师非常年轻，今年只有二十二岁。', l:'23', diff:'easy'},
+{w:'装', py:'zhuāng', m:'load / pack / pretend', s:'弟弟从桌子上抓了一把糖果，装进口袋里。', l:'23', diff:'easy'},
+{w:'搭', py:'dā', m:'build / ride', s:'我和哥哥一起搭积木，搭了房子又搭大桥。', l:'23', diff:'easy'},
+{w:'积木', py:'jī mù', m:'building blocks', s:'这个盒子里的积木不但形状不同，颜色也不一样。', l:'23', diff:'easy',
+  chunks:['这个盒子里的积木','不但','形状不同，','颜色','也不一样。']},
+{w:'捏', py:'niē', m:'mould / pinch', s:'爷爷用泥土给我捏了一只小猫，可爱极了。', l:'23', diff:'easy'},
+{w:'拼', py:'pīn', m:'piece together / puzzle', s:'哥哥花了三天的时间，才把这幅拼图拼好。', l:'23', diff:'easy'},
+{w:'生命', py:'shēng mìng', m:'life', s:'我们要珍爱生命，好好爱护小动物。', l:'23', diff:'medium'},
+{w:'首', py:'shǒu', m:'(measure word for songs)', s:'这首歌是奶奶教给我的，我觉得特别动听。', l:'23', diff:'easy'},
+{w:'奇怪', py:'qí guài', m:'strange', s:'奇怪，丽文怎么一看到我就头也不回地走了？', l:'23', diff:'easy'},
+{w:'插', py:'chā', m:'insert / plug in', s:'看到妈妈插在花瓶里的鲜花，我的心情变得格外轻松。', l:'23', diff:'easy'},
+
+// ---- Lesson 24 ----
+{w:'总是', py:'zǒng shì', m:'always', s:'陈阿姨总是笑嘻嘻的，我从来没见过她生气的样子。', l:'24', diff:'easy'},
+{w:'弄破', py:'nòng pò', m:'to damage / to break', s:'我不小心弄破了哥哥的新衣服，立刻向他道歉。', l:'24', diff:'easy'},
+{w:'亮晶晶', py:'liàng jīng jīng', m:'sparkling', s:'夜晚，亮晶晶的星星在天上调皮地眨着眼睛。', l:'24', diff:'medium'},
+{w:'围', py:'wéi', m:'surround', s:'同学们围在林老师身旁，专心地听她说有趣的故事。', l:'24', diff:'easy'},
+{w:'欢迎', py:'huān yíng', m:'welcome', s:'学校将在下个月举行歌唱比赛，欢迎同学们报名参加。', l:'24', diff:'easy'},
+{w:'漂亮', py:'piào liang', m:'beautiful', s:'妹妹画的画上，有一只漂亮的小鸟在清理自己的羽毛。', l:'24', diff:'easy'},
+{w:'吐', py:'tù', m:'vomit', s:'我家的小猫今天早上吐了，爸爸连忙带它去看兽医。', l:'24', diff:'easy'},
+{w:'能', py:'néng', m:'can / be able to', s:'弟弟能自己冲凉和换衣服了，妈妈感到很开心。', l:'24', diff:'easy'},
+{w:'笑容', py:'xiào róng', m:'smile', s:'校长跟我们说话的时候，总是面带笑容，大家都很喜欢他。', l:'24', diff:'easy'},
+{w:'骄傲', py:'jiāo ào', m:'proud', s:'姐姐代表新加坡出国参加歌唱比赛，我们都为她感到骄傲。', l:'24', diff:'medium',
+  chunks:['姐姐','代表新加坡','出国','参加歌唱比赛，','我们都','为她','感到骄傲。']},
+{w:'欺负', py:'qī fu', m:'bully', s:'文华欺负妹妹，结果被妈妈教训了一顿。', l:'24', diff:'medium'},
+{w:'原谅', py:'yuán liàng', m:'forgive', s:'如果别人做错事后能真心地道歉，我们就应该原谅他们。', l:'24', diff:'medium'},
+{w:'宠爱', py:'chǒng ài', m:'dote on', s:'小丽是家里最小的孩子，所以家人都很宠爱她。', l:'24', diff:'medium'},
+{w:'醒', py:'xǐng', m:'to wake up', s:'早上，我从梦中醒来的时候，太阳已经高高地挂在天上了。', l:'24', diff:'easy'},
+{w:'撞倒', py:'zhuàng dǎo', m:'knock down', s:'我刚走出课室，就被迎面跑过来的同学撞倒了。', l:'24', diff:'easy'},
+{w:'压', py:'yā', m:'press down', s:'美红和丽华吵架后，两个人的心中都像压着一块大石头。', l:'24', diff:'easy'},
+
+// ---- Lesson 25 ----
+{w:'满', py:'mǎn', m:'full', s:'阅读角落坐满了小朋友，他们正在听李老师讲故事。', l:'25', diff:'easy'},
+{w:'果实', py:'guǒ shí', m:'fruit', s:'秋天到了，果树上挂满了又大又红的果实。', l:'25', diff:'easy',
+  chunks:['秋天到了，','果树上','挂满了','又大又红的果实。']},
+{w:'继续', py:'jì xù', m:'continue', s:'叶老师的故事讲到一半，下课铃声就响了，我们都希望她下节课能继续讲。', l:'25', diff:'medium'},
+{w:'摘', py:'zhāi', m:'pluck / pick', s:'爷爷摘了几个又黄又大的玉米，放进篮子里。', l:'25', diff:'easy'},
+{w:'拔', py:'bá', m:'pull out', s:'林伯伯先拔掉田里的野草，然后才种下玉米。', l:'25', diff:'easy'},
+{w:'或者', py:'huò zhě', m:'or', s:'从这里去图书馆不太远，我们可以坐地铁或者巴士。', l:'25', diff:'easy'},
+{w:'开始', py:'kāi shǐ', m:'start', s:'从下个星期一开始，林伯伯就要去上电脑课了。', l:'25', diff:'easy'},
+{w:'遍', py:'biàn', m:'times (measure word)', s:'这本英文绘本非常有趣，我读过好几遍了。', l:'25', diff:'easy'},
+{w:'模样', py:'mú yàng', m:'looks / appearance', s:'爸爸说，十几年不见，王伯伯一点儿都没变，还是原来的模样。', l:'25', diff:'medium'},
+{w:'指', py:'zhǐ', m:'pointing', s:'张小满指着报纸上的照片，得意地说这位老师是他的姐姐。', l:'25', diff:'easy'},
+{w:'比较', py:'bǐ jiào', m:'comparatively', s:'外公觉得早上的空气比较好，所以他喜欢在早上做运动。', l:'25', diff:'medium'},
+{w:'挖', py:'wā', m:'dig out', s:'外婆把泥土里的花生挖出来，煮给我们吃。', l:'25', diff:'easy'},
+{w:'考', py:'kǎo', m:'test', s:'上课时，老师出了几道数学题来考我们。', l:'25', diff:'easy'},
+{w:'根', py:'gēn', m:'root', s:'大树长得越高，它的根就扎得越深。', l:'25', diff:'easy'},
+{w:'答案', py:'dá àn', m:'answer', s:'弟弟算了很久，还是算不出那道数学题的答案，便去请教哥哥。', l:'25', diff:'easy'},
+{w:'惭愧', py:'cán kuì', m:'ashamed', s:'明华知道错了，他红着脸，惭愧地低下了头。', l:'25', diff:'medium'},
+{w:'保持', py:'bǎo chí', m:'to maintain', s:'在图书馆里，我们要保持安静，不能大声说话。', l:'25', diff:'easy'},
+];
+
+const IDIOMS = [
+{w:'心平气和', py:'xīn píng qì hé', m:'calm and composed, not angry', s:'每当我做错事的时候，妈妈不会大声责骂我，而是心平气和地给我讲道理。', l:'idiom', diff:'hard'},
+{w:'药到病除', py:'yào dào bìng chú', m:'the medicine cures the illness at once', s:'吃了医生开的药，我的肚子很快就不痛了，真是药到病除。', l:'idiom', diff:'hard'},
+{w:'活灵活现', py:'huó líng huó xiàn', m:'vivid, lifelike', s:'弟弟把小猫演得活灵活现，真是太精彩了。', l:'idiom', diff:'hard'},
+{w:'恍然大悟', py:'huǎng rán dà wù', m:'suddenly realise the truth', s:'听了老师的话，我才恍然大悟，原来是我错怪了小康！', l:'idiom', diff:'hard'},
+{w:'一言为定', py:'yì yán wéi dìng', m:'that settles it, a deal', s:'我们明天早上十点在图书馆门口见，一言为定，你不要迟到啊！', l:'idiom', diff:'hard'},
+{w:'形影不离', py:'xíng yǐng bù lí', m:'inseparable, always together', s:'我和力明是形影不离的好朋友，我们每天一起上学，周末也常常一起出外游玩。', l:'idiom', diff:'hard'},
+{w:'应有尽有', py:'yīng yǒu jìn yǒu', m:'everything one could want is there', s:'这是全国最大的书店，各类书籍应有尽有。', l:'idiom', diff:'hard'},
+{w:'自相矛盾', py:'zì xiāng máo dùn', m:'self-contradictory', s:'弟弟刚才说他不喜欢吃甜食，现在却吵着要吃糖果，真是自相矛盾。', l:'idiom', diff:'hard'},
+{w:'目不转睛', py:'mù bù zhuǎn jīng', m:'staring intently, without blinking', s:'弟弟瞪大了眼睛，目不转睛地盯着魔术师手中的纸牌。', l:'idiom', diff:'hard'},
+{w:'温故知新', py:'wēn gù zhī xīn', m:'review the old to learn the new', s:'学过的知识要经常复习，温故知新，才能不断进步。', l:'idiom', diff:'hard'},
+{w:'不闻不问', py:'bù wén bù wèn', m:'indifferent, not caring at all', s:'看到同学有困难，我们不可以不闻不问，应该主动帮忙。', l:'idiom', diff:'hard'},
+{w:'不顾一切', py:'bù gù yí qiè', m:'regardless of everything', s:'勇敢的消防员不顾一切地冲进火场，把老奶奶救了出来。', l:'idiom', diff:'hard'},
+{w:'流连忘返', py:'liú lián wàng fǎn', m:'so delighted one forgets to leave', s:'圣淘沙的景色十分美丽，让人流连忘返。', l:'idiom', diff:'hard'},
+{w:'情同手足', py:'qíng tóng shǒu zú', m:'close as brothers', s:'爸爸和王叔叔从小就是朋友，他们情同手足，感情很好。', l:'idiom', diff:'hard',
+  chunks:['爸爸和王叔叔','从小','就是朋友，','他们情同手足，','感情很好。']},
+{w:'刮目相看', py:'guā mù xiāng kàn', m:'to see someone in a new light', s:'哥哥不再沉迷电脑游戏，他用功读书，学习成绩进步很快，让人刮目相看。', l:'idiom', diff:'hard'},
+{w:'生龙活虎', py:'shēng lóng huó hǔ', m:'very lively and full of vitality', s:'赛场上，运动员们个个生龙活虎，奋力地向终点跑去。', l:'idiom', diff:'hard'},
+{w:'轻而易举', py:'qīng ér yì jǔ', m:'very easy to do', s:'这是一道小学的数学题，上中学的哥哥轻而易举就算出了答案。', l:'idiom', diff:'hard'},
+{w:'奇花异草', py:'qí huā yì cǎo', m:'strange and unique flowers and plants', s:'滨海湾花园里有各种各样的奇花异草，吸引了很多游客。', l:'idiom', diff:'hard'},
+{w:'破涕为笑', py:'pò tì wéi xiào', m:'stop crying and start smiling', s:'正在哭闹的小妹妹看到玩具熊，立刻破涕为笑。', l:'idiom', diff:'hard'},
+{w:'吞吞吐吐', py:'tūn tūn tǔ tǔ', m:'speaking haltingly', s:'看到弟弟吞吞吐吐的样子，妈妈怀疑他在说谎。', l:'idiom', diff:'hard'},
+{w:'自欺欺人', py:'zì qī qī rén', m:'deceiving oneself and others', s:'文华在考试中作弊，这种自欺欺人的行为是不可取的。', l:'idiom', diff:'hard'},
+{w:'满不在乎', py:'mǎn bù zài hu', m:'not caring at all', s:'国华的成绩退步了，妈妈劝他要努力，可他却满不在乎。', l:'idiom', diff:'hard'},
+{w:'有始有终', py:'yǒu shǐ yǒu zhōng', m:'seeing things through to the end', s:'姐姐报名参加了日语班，她有始有终，认真上完了全部课程。', l:'idiom', diff:'hard'},
+{w:'一模一样', py:'yí mú yí yàng', m:'exactly identical', s:'文文和乐乐是双胞胎，他们长得一模一样，我分不出谁是哥哥，谁是弟弟。', l:'idiom', diff:'hard',
+  chunks:['文文和乐乐','是双胞胎，','他们','长得一模一样，','我','分不出','谁是哥哥，','谁是弟弟。']},
+];
+
+const PATTERNS = [
+{w:'有些……有些……', py:null, m:'some... some...', s:'下课了，食堂里有很多同学，他们有些在排队买食物，有些坐在餐桌前吃东西。', l:'pattern', diff:'hard', reorderOnly:true,
+  chunks:['下课了，','食堂里','有很多同学，','他们','有些在排队买食物，','有些','坐在餐桌前','吃东西。']},
+{w:'先……再……', py:null, m:'first... then...', s:'放学后，我先到图书馆借书，再回家吃饭。', l:'pattern', diff:'hard', reorderOnly:true,
+  chunks:['放学后，','我','先到图书馆借书，','再','回家吃饭。']},
+{w:'有的……有的……有的……', py:null, m:'some... some... some...', s:'海边的人真多，他们有的在打球，有的在玩泥沙，有的在晒太阳。', l:'pattern', diff:'hard', reorderOnly:true,
+  chunks:['海边的人真多，','他们','有的在打球，','有的','在玩泥沙，','有的','在晒太阳。']},
+{w:'虽然……却……', py:null, m:'although... yet...', s:'明英虽然只有七岁，个子也不高，力气却很大。', l:'pattern', diff:'hard', reorderOnly:true,
+  chunks:['明英','虽然只有七岁，','个子也不高，','力气','却很大。']},
+];
+
+const ALL = VOCAB.concat(IDIOMS).concat(PATTERNS);
+
+/* 字辨 — pick the correct look-alike character given pinyin */
+const ZIBIAN = [
+{s:'美华是我的新邻居，她住在我家___上。',py:'lóu',correct:'楼',wrong:['数','糕'],l:'7'},
+{s:'表哥___我骑脚踏车，我很快就学会了。',py:'jiāo',correct:'教',wrong:['交','叫'],l:'8'},
+{s:'爸爸口渴了，我倒了一杯___水给他喝。',py:'wēn',correct:'温',wrong:['文','闻'],l:'8'},
+{s:'我今年上二年___了，我会自己坐巴士上学。',py:'jí',correct:'级',wrong:['及','极'],l:'3'},
+{s:'我和丽丽___图书馆出来后，就各自回家了。',py:'cóng',correct:'从',wrong:['众','丛'],l:'3'},
+{s:'听到有人在叫我，我___过头一看，原来是明华。',py:'zhuǎn',correct:'转',wrong:['专','传'],l:'7'},
+{s:'一到夜晚，马路两旁就会___起五颜六色的灯。',py:'liàng',correct:'亮',wrong:['几','高'],l:'7'},
+{s:'妈妈的生日快到了，我做了一张三___形的生日卡送给她。',py:'jiǎo',correct:'角',wrong:['用','有'],l:'3'},
+{s:'今天的天气特别___，红彤彤的太阳像火球一样烤着大地。',py:'rè',correct:'热',wrong:['然','照'],l:'8'},
+{s:'每个星期一下午，我们都会到学校的音乐___上音乐课。',py:'shì',correct:'室',wrong:['试','适'],l:'1'},
+{s:'放学回到家，我和弟弟先做作业，再到___厅看故事书。',py:'kè',correct:'客',wrong:['空','安'],l:'3'},
+{s:'这次游泳比赛，我得了___一名。',py:'dì',correct:'第',wrong:['递','弟'],l:'3'},
+{s:'表妹比我小两___，但她长得比我高。',py:'suì',correct:'岁',wrong:['多','出'],l:'3'},
+{s:'那位穿___色衣服的男士，就是我的爸爸。',py:'lán',correct:'蓝',wrong:['盒','篮'],l:'3'},
+{s:'上课时，我们应该___心地听老师讲课。',py:'zhuān',correct:'专',wrong:['转','传'],l:'1'},
+{s:'雨过天晴，天___中出现一道美丽的彩虹。',py:'kōng',correct:'空',wrong:['宝','穷'],l:'12'},
+{s:'这些都是我要买的故事书，一___有七本。',py:'gòng',correct:'共',wrong:['兴','只'],l:'3'},
+{s:'爷爷家屋后有一___大树，我喜欢坐在树下听鸟儿唱歌。',py:'kē',correct:'棵',wrong:['果','颗'],l:'12'},
+{s:'弟弟___经吃饱了，再也吃不下别的食物了。',py:'yǐ',correct:'已',wrong:['己','巳'],l:'7'},
+{s:'同学们来到食堂里，___队买食物。',py:'pái',correct:'排',wrong:['非','牌'],l:'8'},
+{s:'客厅的电视机___了，爸爸便买了一台新的。',py:'huài',correct:'坏',wrong:['怀','杯'],l:'12'},
+{s:'天还没有___，我和哥哥就起床为妈妈做早餐。',py:'liàng',correct:'亮',wrong:['京','高'],l:'7'},
+{s:'我亲手做了一张贺卡给妈妈，___她母亲节快乐。',py:'zhù',correct:'祝',wrong:['说','视'],l:'1'},
+{s:'一片叶子从树上___下来，落在我的头上。',py:'diào',correct:'掉',wrong:['桌','棹'],l:'12'},
+{s:'窗外电闪雷鸣，妹妹很___怕，吓得哭了起来。',py:'hài',correct:'害',wrong:['容','宝'],l:'12'},
+{s:'我们就买这个三角___的草莓蛋糕吧，姐姐一定会喜欢的。',py:'xíng',correct:'形',wrong:['开','行'],l:'3'},
+{s:'小亮的叔叔是一名消防___，哪里发生了火灾，他就去哪里灭火。',py:'yuán',correct:'员',wrong:['圆','园'],l:'8'},
+{s:'除夕那天，爸爸把春联___在大门上。',py:'tiē',correct:'贴',wrong:['站','帖'],l:'1'},
+{s:'弟弟全身都___了，妈妈叫他赶快去冲凉。',py:'shī',correct:'湿',wrong:['星','温'],l:'12'},
+{s:'突然___起了大风，把我的帽子吹走了。',py:'guā',correct:'刮',wrong:['乱','甜'],l:'12'},
+];
+
+/* 词语搭配 — match the left word to its right collocate */
+const DAPEI = [
+{left:'贴',right:'对联',l:'1'},{left:'神奇的',right:'动物',l:'1'},{left:'错过',right:'机会',l:'1'},
+{left:'折',right:'衣服',l:'1'},{left:'专心地',right:'听课',l:'1'},{left:'现在',right:'出发',l:'1'},
+{left:'幸福的',right:'生活',l:'1'},{left:'鞋子',right:'合适',l:'1'},
+{left:'特别',right:'好看',l:'3'},{left:'递给',right:'客人',l:'3'},{left:'扔',right:'垃圾',l:'3'},
+{left:'一共',right:'十页',l:'3'},{left:'各自',right:'离开',l:'3'},{left:'伸出',right:'双手',l:'3'},
+{left:'从不',right:'挑食',l:'3'},{left:'天气',right:'凉爽',l:'3'},
+{left:'照',right:'镜子',l:'7'},{left:'行人',right:'天桥',l:'7'},{left:'互相',right:'问好',l:'7'},
+{left:'马路',right:'旁边',l:'7'},{left:'仔细地',right:'阅读',l:'7'},{left:'已经',right:'长大',l:'7'},
+{left:'住在',right:'顶楼',l:'7'},{left:'明亮的',right:'灯光',l:'7'},
+{left:'发生',right:'火灾',l:'8'},{left:'扑灭',right:'大火',l:'8'},{left:'找到',right:'座位',l:'8'},
+{left:'保护',right:'动物',l:'8'},{left:'闻到',right:'花香',l:'8'},{left:'乖巧',right:'懂事',l:'8'},
+{left:'冰凉的',right:'双手',l:'8'},{left:'温暖的',right:'阳光',l:'8'},
+{left:'打开',right:'窗户',l:'12'},{left:'越来越',right:'冷',l:'12'},{left:'忘记',right:'带伞',l:'12'},
+{left:'结',right:'果子',l:'12'},{left:'消灭',right:'害虫',l:'12'},{left:'歌声',right:'响亮',l:'12'},
+{left:'一件',right:'事情',l:'12'},{left:'全身',right:'淋湿',l:'12'},
+{left:'精彩的',right:'活动',l:'23'},{left:'搭',right:'积木',l:'23'},{left:'拼',right:'拼图',l:'23'},
+{left:'宝贵的',right:'生命',l:'23'},{left:'捏',right:'粘土',l:'23'},
+{left:'露出',right:'笑容',l:'24'},{left:'热烈',right:'欢迎',l:'24'},{left:'请求',right:'原谅',l:'24'},
+{left:'保持',right:'安静',l:'25'},{left:'找到',right:'答案',l:'25'},{left:'继续',right:'努力',l:'25'},
+];
+
+const LESSON_LABELS = {
+  '1':'第1课','3':'第3课','7':'第7课','8':'第8课','12':'第12课',
+  '23':'第23课','24':'第24课','25':'第25课','idiom':'成语','pattern':'句型'
+};
+const LESSON_ORDER = ['all','1','3','7','8','12','23','24','25','idiom','pattern'];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let filterLesson = 'all';
+let difficulty = 'all';
+let score=0, total=0, streak=0, litStars=0;
+let recentWords = [];
+let current = null; // {type, target, ...}
+let checked = false;
+let viewMode = 'practice'; // 'practice' | 'review'
+
+/* persistent stats */
+let stats = { correct:0, attempts:0, wrong:{} };
+async function loadStats(){
+  try {
+    const r = await window.storage.get('vocab_stats');
+    if(r && r.value) stats = JSON.parse(r.value);
+  } catch(e){}
+  renderStatsBar();
+}
+async function saveStats(){
+  try { await window.storage.set('vocab_stats', JSON.stringify(stats)); } catch(e){}
+}
+function recordAnswer(target, isCorrect){
+  stats.attempts++;
+  if(isCorrect){ stats.correct++; }
+  else {
+    const key = target.w;
+    if(!stats.wrong[key]) stats.wrong[key] = {count:0, m:target.m, py:target.py||'', l:target.l, s:target.s};
+    stats.wrong[key].count++;
+  }
+  saveStats();
+  renderStatsBar();
+}
+function renderStatsBar(){
+  const el = document.getElementById('statsBar');
+  if(!el) return;
+  const pct = stats.attempts ? Math.round(stats.correct/stats.attempts*100) : 0;
+  const wrongCount = Object.keys(stats.wrong).length;
+  el.innerHTML = `正确率 <b>${pct}%</b> (${stats.correct}/${stats.attempts})` +
+    (wrongCount ? ` · <span id="reviewLink" style="color:var(--gold);cursor:pointer;text-decoration:underline;">复习错题 (${wrongCount})</span>` : '');
+  const link = document.getElementById('reviewLink');
+  if(link) link.onclick = showReview;
+}
+
+/* ============================================================
+   Sound effects (synthesized, no external files needed)
+   ============================================================ */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(AC) audioCtx = new AC();
+  }
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, startTime, duration, ctx, gainPeak){
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.02);
+}
+function playCorrectSound(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  // bright ascending two-note chime, duolingo-ish
+  tone(784, now, 0.14, ctx, 0.18);        // G5
+  tone(1046.5, now + 0.09, 0.22, ctx, 0.18); // C6
+}
+function playWrongSound(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  tone(196, now, 0.22, ctx, 0.14); // low soft buzz
+}
+
+/* ============================================================
+   Star field
+   ============================================================ */
+(function initStars(){
+  const field = document.getElementById('starfield');
+  for(let i=0;i<60;i++){
+    const s = document.createElement('span');
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDelay = (Math.random()*3)+'s';
+    s.style.width = s.style.height = (Math.random()<0.15 ? '3px':'2px');
+    field.appendChild(s);
+  }
+})();
+
+/* ============================================================
+   Constellation
+   ============================================================ */
+const CONST_POINTS = [[20,36],[60,14],[105,30],[150,10],[200,32],[250,12],[295,34],[340,16]];
+function renderConstellation(){
+  const svg = document.getElementById('constSvg');
+  const lit = litStars % 8;
+  let html = '';
+  for(let i=0;i<CONST_POINTS.length-1;i++){
+    const [x1,y1]=CONST_POINTS[i], [x2,y2]=CONST_POINTS[i+1];
+    const on = i < lit;
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${on?'#F0B429':'#2A3566'}" stroke-width="1.5" stroke-dasharray="${on?'0':'3,3'}"/>`;
+  }
+  CONST_POINTS.forEach((p,i)=>{
+    const on = i < lit;
+    html += `<circle cx="${p[0]}" cy="${p[1]}" r="${on?6:4}" fill="${on?'#F0B429':'#232E5C'}" stroke="${on?'#F6D374':'#3A4680'}" stroke-width="${on?2:1}"/>`;
+    if(on) html += `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="none" stroke="#F0B429" stroke-width="1" opacity="0.35"/>`;
+  });
+  svg.innerHTML = html;
+  document.getElementById('constCount').textContent = lit;
+}
+
+/* ============================================================
+   Filters UI
+   ============================================================ */
+function renderLessonSelect(){
+  const sel = document.getElementById('lessonSelect');
+  sel.innerHTML = '';
+  LESSON_ORDER.forEach(key=>{
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key==='all' ? '全部课文' : LESSON_LABELS[key];
+    sel.appendChild(opt);
+  });
+  sel.value = filterLesson;
+  sel.onchange = ()=>{ filterLesson = sel.value; nextQuestion(); };
+}
+const DIFFS = [{id:'all',label:'全部'},{id:'easy',label:'简单'},{id:'medium',label:'普通'},{id:'hard',label:'挑战'}];
+function renderDiffRow(){
+  const wrap = document.getElementById('diffRow');
+  wrap.innerHTML = '';
+  DIFFS.forEach(d=>{
+    const b = document.createElement('button');
+    b.className = 'diff-pill' + (difficulty===d.id ? ' active':'');
+    b.textContent = d.label;
+    b.onclick = ()=>{ difficulty = d.id; renderDiffRow(); nextQuestion(); };
+    wrap.appendChild(b);
+  });
+}
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function levenshtein(a,b){
+  const m=a.length, n=b.length;
+  const dp = Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=0;i<=m;i++) dp[i][0]=i;
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+function stripTones(s){
+  const map = {'ā':'a','á':'a','ǎ':'a','à':'a','ō':'o','ó':'o','ǒ':'o','ò':'o','ē':'e','é':'e','ě':'e','è':'e',
+    'ī':'i','í':'i','ǐ':'i','ì':'i','ū':'u','ú':'u','ǔ':'u','ù':'u','ü':'v','ǖ':'v','ǘ':'v','ǚ':'v','ǜ':'v'};
+  return s.split('').map(c=>map[c]||c).join('');
+}
+function normPy(s){
+  return stripTones(s).toLowerCase().replace(/[^a-z]/g,'');
+}
+
+function poolFor(needsPy, allowReorderOnly){
+  return ALL.filter(e=>{
+    if(!allowReorderOnly && e.reorderOnly) return false;
+    if(needsPy && !e.py) return false;
+    if(filterLesson!=='all' && e.l!==filterLesson) return false;
+    if(difficulty!=='all' && e.diff!==difficulty) return false;
+    return true;
+  });
+}
+function poolForReorder(){
+  return ALL.filter(e=>{
+    if(!e.chunks) return false;
+    if(filterLesson!=='all' && e.l!==filterLesson) return false;
+    if(difficulty!=='all' && e.diff!==difficulty) return false;
+    return true;
+  });
+}
+function poolForCompletion(){
+  return ALL.filter(e=>{
+    if(e.reorderOnly) return false;
+    if(e.s.indexOf('，')===-1) return false;
+    if(filterLesson!=='all' && e.l!==filterLesson) return false;
+    if(difficulty!=='all' && e.diff!==difficulty) return false;
+    return true;
+  });
+}
+
+function pickTarget(pool){
+  let candidates = pool.filter(w=>!recentWords.includes(w.w));
+  if(candidates.length===0) candidates = pool;
+  const t = candidates[Math.floor(Math.random()*candidates.length)];
+  recentWords.push(t.w);
+  const cap = Math.min(10, Math.max(0,pool.length-1));
+  if(recentWords.length>cap) recentWords.shift();
+  return t;
+}
+
+function pyDistractors(target, count){
+  const poolPy = [...new Set(ALL.filter(e=>e.py && e.py!==target.py).map(e=>e.py))];
+  const scored = poolPy.map(p=>({p, d:levenshtein(target.py,p)})).sort((a,b)=>a.d-b.d);
+  let picks;
+  if(difficulty==='hard'){
+    picks = scored.slice(0,count);
+  } else if(difficulty==='easy'){
+    const farHalf = scored.slice(Math.floor(scored.length*0.5));
+    picks = shuffle(farHalf).slice(0,count);
+  } else {
+    const closeChunk = scored.slice(0, Math.max(count*3,8));
+    picks = shuffle(closeChunk).slice(0,count);
+  }
+  return picks.map(x=>x.p);
+}
+function wordDistractors(target, count){
+  const src = ALL.filter(e=>!e.reorderOnly && e.w!==target.w);
+  return shuffle(src).slice(0,count).map(e=>e.w);
+}
+
+function buildSentenceParts(target){
+  const idx = target.s.indexOf(target.w);
+  if(idx===-1) return {before:target.s, mid:target.w, after:''};
+  return {before:target.s.slice(0,idx), mid:target.w, after:target.s.slice(idx+target.w.length)};
+}
+
+/* ============================================================
+   Question type generators
+   ============================================================ */
+function typeWeights(){
+  if(difficulty==='easy') return {A:3,B:3,G:2,D:1,F:2,C:2};
+  if(difficulty==='medium') return {A:2,B:2,G:2,D:2,H:1,F:2,C:2};
+  if(difficulty==='hard') return {A:2,B:1,G:1,D:2,H:1,F:2,C:2};
+  return {A:2,B:2,G:2,D:2,H:1,F:2,C:2};
+}
+function weightedPick(weights, allowed){
+  const keys = Object.keys(weights).filter(k=>allowed.includes(k));
+  const total = keys.reduce((s,k)=>s+weights[k],0);
+  let r = Math.random()*total;
+  for(const k of keys){ r -= weights[k]; if(r<=0) return k; }
+  return keys[0];
+}
+
+function poolZibian(){
+  return ZIBIAN.filter(z=>{
+    if(filterLesson!=='all' && z.l!==filterLesson) return false;
+    return true;
+  });
+}
+function poolDapei(){
+  return DAPEI.filter(d=>{
+    if(filterLesson!=='all' && d.l!==filterLesson) return false;
+    return true;
+  });
+}
+
+/* review panel */
+function showReview(){
+  viewMode = 'review';
+  document.getElementById('practiceView').style.display='none';
+  document.querySelector('.bottombar').style.display='none';
+  const rv = document.getElementById('reviewView');
+  rv.style.display='block';
+  const wrongEntries = Object.entries(stats.wrong).sort((a,b)=>b[1].count-a[1].count);
+  let html = '<div class="review-panel">';
+  html += '<div class="review-title">错题复习 <button class="review-back" id="backBtn">← 返回练习</button></div>';
+  if(wrongEntries.length===0){
+    html += '<div class="review-empty">还没有错题，继续加油！ 🎉</div>';
+  } else {
+    wrongEntries.forEach(([word,info])=>{
+      const lessonLabel = LESSON_LABELS[info.l] || info.l;
+      html += `<div class="review-item">
+        <div><div class="review-word">${escapeHtml(word)}</div>
+        <div class="review-py pinyin">${escapeHtml(info.py||'')}</div>
+        <div class="review-meaning">${escapeHtml(info.m)}</div></div>
+        <div class="review-meta"><div class="review-count">错 ${info.count} 次</div>
+        <div class="review-lesson">${lessonLabel}</div></div></div>`;
+    });
+    html += `<button class="review-clear" id="clearWrong">清空错题记录</button>`;
+  }
+  html += '</div>';
+  rv.innerHTML = html;
+  document.getElementById('backBtn').onclick = hideReview;
+  const clearBtn = document.getElementById('clearWrong');
+  if(clearBtn) clearBtn.onclick = ()=>{ stats.wrong={}; saveStats(); showReview(); };
+}
+function hideReview(){
+  viewMode = 'practice';
+  document.getElementById('practiceView').style.display='block';
+  document.querySelector('.bottombar').style.display='block';
+  document.getElementById('reviewView').style.display='none';
+}
+
+function nextQuestion(){
+  checked = false;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').textContent = '';
+  const actionBtn = document.getElementById('actionBtn');
+  actionBtn.textContent = '检查';
+  actionBtn.disabled = true;
+  actionBtn.classList.remove('ok','no');
+
+  const pReorder = poolForReorder();
+  const pCompletion = poolForCompletion();
+  const pPy = poolFor(true,false);
+  const pWord = poolFor(false,false);
+  const pZibian = poolZibian();
+  const pDapei = poolDapei();
+
+  const allowed = [];
+  if(pWord.length) allowed.push('B');
+  if(pPy.length){ allowed.push('A'); allowed.push('G'); }
+  if(pReorder.length) allowed.push('D');
+  if(pCompletion.length && difficulty!=='easy') allowed.push('H');
+  if(pZibian.length) allowed.push('F');
+  if(pDapei.length>=4) allowed.push('C');
+
+  if(allowed.length===0){
+    document.getElementById('sentence').innerHTML = '这个组合暂时没有题目，换个课文或难度试试吧～';
+    document.getElementById('instruction').textContent = '';
+    document.getElementById('qbody').innerHTML = '';
+    return;
+  }
+
+  const type = weightedPick(typeWeights(), allowed);
+  let target;
+  if(type==='D') target = pickTarget(pReorder);
+  else if(type==='H') target = pickTarget(pCompletion);
+  else if(type==='A'||type==='G') target = pickTarget(pPy);
+  else if(type==='F') target = pZibian[Math.floor(Math.random()*pZibian.length)];
+  else if(type==='C') target = pDapei[Math.floor(Math.random()*pDapei.length)];
+  else target = pickTarget(pWord);
+
+  const lessonLabel = (type==='F'||type==='C') ? (LESSON_LABELS[target.l]||target.l) : (LESSON_LABELS[target.l]||target.l);
+  document.getElementById('lessonChip').textContent = lessonLabel;
+
+  current = {type, target};
+
+  if(type==='A') renderTypeA(target);
+  else if(type==='G') renderTypeG(target);
+  else if(type==='B') renderTypeB(target);
+  else if(type==='D') renderTypeD(target);
+  else if(type==='H') renderTypeH(target);
+  else if(type==='F') renderTypeF(target);
+  else if(type==='C') renderTypeC(target);
+}
+
+function setInstruction(txt){ document.getElementById('instruction').textContent = txt; }
+function setQType(txt){ document.getElementById('qType').textContent = txt; }
+
+/* Type A: 拼音选择 - underline target word, pick correct pinyin */
+function renderTypeA(target){
+  setQType('拼音选择');
+  const parts = buildSentenceParts(target);
+  document.getElementById('sentence').innerHTML =
+    escapeHtml(parts.before) + `<span class="target">${escapeHtml(parts.mid)}</span>` + escapeHtml(parts.after);
+  setInstruction('选出划线词语的正确拼音：');
+  const options = shuffle([target.py, ...pyDistractors(target,3)]);
+  renderOptions(options, target.py, (val)=>val, true);
+}
+
+/* Type G: 看拼音选字 - show pinyin cue in place, choose correct hanzi */
+function renderTypeG(target){
+  setQType('看拼音选字');
+  const parts = buildSentenceParts(target);
+  document.getElementById('sentence').innerHTML =
+    escapeHtml(parts.before) + `<span class="pinyincue">（${escapeHtml(target.py)}）</span>` + escapeHtml(parts.after);
+  setInstruction('根据拼音提示，选出正确的词语：');
+  const options = shuffle([target.w, ...wordDistractors(target,3)]);
+  renderOptions(options, target.w, (val)=>val, false);
+}
+
+/* Type B: 字词填空 - blank word, choose from options */
+function renderTypeB(target){
+  const isIdiom = target.l==='idiom';
+  setQType(isIdiom ? '成语填空' : '字词填空');
+  const parts = buildSentenceParts(target);
+  const blankLen = Math.max(2, target.w.length);
+  document.getElementById('sentence').innerHTML =
+    escapeHtml(parts.before) + `<span class="blank">${'＿'.repeat(blankLen)}</span>` + escapeHtml(parts.after);
+  setInstruction('选出正确的词语，填入句子的空格中：');
+  const options = shuffle([target.w, ...wordDistractors(target,3)]);
+  renderOptions(options, target.w, (val)=>val, false);
+}
+
+/* Common option renderer for A/B/G */
+function renderOptions(options, correctVal, getVal, isPinyin){
+  const body = document.getElementById('qbody');
+  body.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'options';
+  options.forEach(optVal=>{
+    const b = document.createElement('button');
+    b.className = 'opt' + (isPinyin ? ' pinyin' : '');
+    b.textContent = optVal;
+    b.onclick = ()=>{
+      if(checked) return;
+      document.querySelectorAll('.opt').forEach(o=>o.classList.remove('selected'));
+      b.classList.add('selected');
+      current.selected = optVal;
+      document.getElementById('actionBtn').disabled = false;
+    };
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+}
+
+/* Type D: 组词成句 - tap tokens in order */
+function renderTypeD(target){
+  setQType('组词成句');
+  document.getElementById('sentence').innerHTML = '<span style="color:#8B7F5E;font-size:.95rem;">把下面的词语按正确顺序排成一句话：</span>';
+  setInstruction('');
+  const body = document.getElementById('qbody');
+  const answerArr = [];
+  let bankChunks = shuffle(target.chunks);
+  let attempts=0;
+  while(JSON.stringify(bankChunks)===JSON.stringify(target.chunks) && attempts<5){ bankChunks = shuffle(target.chunks); attempts++; }
+
+  function render(){
+    body.innerHTML = '';
+    const az = document.createElement('div');
+    az.className = 'answerzone';
+    answerArr.forEach((tokText, idx)=>{
+      const t = document.createElement('div');
+      t.className = 'tok placed';
+      t.textContent = tokText;
+      t.onclick = ()=>{
+        if(checked) return;
+        answerArr.splice(idx,1);
+        render();
+      };
+      az.appendChild(t);
+    });
+    body.appendChild(az);
+
+    const bank = document.createElement('div');
+    bank.className = 'bank';
+    // show each bank tile unless a matching-text instance has already been placed
+    const used = {};
+    answerArr.forEach(t=>{ used[t]=(used[t]||0)+1; });
+    const shown = {};
+    bankChunks.forEach(tokText=>{
+      shown[tokText]=(shown[tokText]||0)+1;
+      const alreadyUsed = used[tokText]||0;
+      if(shown[tokText] <= alreadyUsed) return; // this instance is currently placed in the answer
+      const t = document.createElement('div');
+      t.className = 'tok';
+      t.textContent = tokText;
+      t.onclick = ()=>{
+        if(checked) return;
+        answerArr.push(tokText);
+        render();
+      };
+      bank.appendChild(t);
+    });
+    body.appendChild(bank);
+
+    document.getElementById('actionBtn').disabled = answerArr.length !== target.chunks.length;
+  }
+  render();
+  current.getAnswer = ()=>answerArr;
+}
+
+/* Type H: 完成句子 - pick correct completion after first comma */
+function renderTypeH(target){
+  setQType('完成句子');
+  const idx = target.s.indexOf('，');
+  const stem = target.s.slice(0, idx+1);
+  const correctCompletion = target.s.slice(idx+1);
+  document.getElementById('sentence').innerHTML = escapeHtml(stem) + '<span class="blank">……</span>';
+  setInstruction('选出最合适的句子，把它补充完整：');
+
+  const others = ALL.filter(e=>e.s!==target.s && e.s.indexOf('，')>-1 && !e.reorderOnly);
+  const distractorCompletions = shuffle(others).slice(0,3).map(e=>{
+    const i2 = e.s.indexOf('，');
+    return e.s.slice(i2+1);
+  });
+  const options = shuffle([correctCompletion, ...distractorCompletions]);
+
+  const body = document.getElementById('qbody');
+  body.innerHTML = '';
+  options.forEach(optVal=>{
+    const b = document.createElement('button');
+    b.className='opt';
+    b.style.gridColumn='1 / -1';
+    b.style.textAlign='left';
+    b.style.fontSize='1.02rem';
+    b.textContent = optVal;
+    b.onclick=()=>{
+      if(checked) return;
+      document.querySelectorAll('.opt').forEach(o=>o.classList.remove('selected'));
+      b.classList.add('selected');
+      current.selected = optVal;
+      document.getElementById('actionBtn').disabled = false;
+    };
+    body.appendChild(b);
+  });
+  current.correctVal = correctCompletion;
+}
+
+/* Type F: 字辨 - pick the correct look-alike character */
+function renderTypeF(target){
+  setQType('字辨');
+  const parts = target.s.split('___');
+  document.getElementById('sentence').innerHTML =
+    escapeHtml(parts[0]) + `<span class="blank">＿</span>` + (parts[1] ? escapeHtml(parts[1]):'');
+  setInstruction(`根据拼音提示 <span class="pinyin" style="color:var(--ink);font-weight:700;">${escapeHtml(target.py)}</span>，选出正确的汉字：`);
+  document.getElementById('instruction').innerHTML = document.getElementById('instruction').textContent;
+  // re-render with innerHTML since we used a span
+  document.getElementById('instruction').innerHTML =
+    `根据拼音提示 <span class="pinyin" style="color:#1B2340;font-weight:700;">${escapeHtml(target.py)}</span>，选出正确的汉字：`;
+  const options = shuffle([target.correct, ...target.wrong]);
+  const body = document.getElementById('qbody');
+  body.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'options';
+  options.forEach(optVal=>{
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = optVal;
+    b.style.fontSize = '1.5rem';
+    b.onclick = ()=>{
+      if(checked) return;
+      document.querySelectorAll('.opt').forEach(o=>o.classList.remove('selected'));
+      b.classList.add('selected');
+      current.selected = optVal;
+      document.getElementById('actionBtn').disabled = false;
+    };
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+}
+
+/* Type C: 词语搭配 - pick the matching collocate */
+function renderTypeC(target){
+  setQType('词语搭配');
+  const showLeft = Math.random() < 0.5;
+  const shown = showLeft ? target.left : target.right;
+  const answer = showLeft ? target.right : target.left;
+  document.getElementById('sentence').innerHTML =
+    showLeft ? `${escapeHtml(shown)} + <span class="blank">？</span>` :
+              `<span class="blank">？</span> + ${escapeHtml(shown)}`;
+  setInstruction('选出最合适的词语搭配：');
+  // distractors: other DAPEI entries' matching side
+  const others = DAPEI.filter(d=>d!==target);
+  const distPool = showLeft ? others.map(d=>d.right) : others.map(d=>d.left);
+  const uniqueDist = [...new Set(distPool.filter(d=>d!==answer))];
+  const distractors = shuffle(uniqueDist).slice(0,3);
+  const options = shuffle([answer, ...distractors]);
+  const body = document.getElementById('qbody');
+  body.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'options';
+  options.forEach(optVal=>{
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = optVal;
+    b.onclick = ()=>{
+      if(checked) return;
+      document.querySelectorAll('.opt').forEach(o=>o.classList.remove('selected'));
+      b.classList.add('selected');
+      current.selected = optVal;
+      current.correctVal = answer;
+      document.getElementById('actionBtn').disabled = false;
+    };
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+  current.correctVal = answer;
+}
+
+/* ============================================================
+   Grading / Duolingo-style check flow
+   ============================================================ */
+function doCheck(){
+  if(checked){ nextQuestion(); return; }
+  checked = true;
+  total++;
+  let isCorrect = false;
+  const fb = document.getElementById('feedback');
+  const actionBtn = document.getElementById('actionBtn');
+  const target = current.target;
+
+  if(current.type==='A' || current.type==='G' || current.type==='B'){
+    const correctVal = current.type==='B' ? target.w : (current.type==='G' ? target.w : target.py);
+    isCorrect = current.selected === correctVal;
+    document.querySelectorAll('.opt').forEach(o=>{
+      o.disabled = true;
+      if(o.textContent === correctVal) o.classList.add('correct');
+      else if(o.classList.contains('selected') && !isCorrect) o.classList.add('wrong');
+      else o.classList.add('dim');
+    });
+  } else if(current.type==='H' || current.type==='C'){
+    isCorrect = current.selected === current.correctVal;
+    document.querySelectorAll('.opt').forEach(o=>{
+      o.disabled = true;
+      if(o.textContent === current.correctVal) o.classList.add('correct');
+      else if(o.classList.contains('selected') && !isCorrect) o.classList.add('wrong');
+      else o.classList.add('dim');
+    });
+  } else if(current.type==='F'){
+    isCorrect = current.selected === target.correct;
+    document.querySelectorAll('.opt').forEach(o=>{
+      o.disabled = true;
+      if(o.textContent === target.correct) o.classList.add('correct');
+      else if(o.classList.contains('selected') && !isCorrect) o.classList.add('wrong');
+      else o.classList.add('dim');
+    });
+  } else if(current.type==='D'){
+    const ans = current.getAnswer();
+    isCorrect = JSON.stringify(ans) === JSON.stringify(target.chunks);
+    document.querySelectorAll('.tok.placed').forEach(t=>{
+      t.classList.add(isCorrect ? 'tokcorrect':'tokwrong');
+    });
+    document.querySelectorAll('.tok:not(.placed)').forEach(t=>t.style.opacity='.4');
+  }
+
+  /* build a pseudo-target for recording stats (F and C targets lack .w/.m) */
+  const recordTarget = (current.type==='F')
+    ? {w:target.correct, m:'字辨: '+target.s.replace('___',target.correct), py:target.py, l:target.l, s:target.s}
+    : (current.type==='C')
+    ? {w:target.left+'+'+target.right, m:'词语搭配', py:'', l:target.l, s:''}
+    : target;
+  recordAnswer(recordTarget, isCorrect);
+
+  if(isCorrect){
+    score++; streak++; litStars++;
+    playCorrectSound();
+    fb.classList.add('ok'); fb.classList.remove('no');
+    let extra = '';
+    if(current.type==='A') extra = `「${target.w}」读作 <b class="pinyin">${target.py}</b>`;
+    else if(current.type==='D') extra = '句子顺序正确！';
+    else if(current.type==='F') extra = `正确答案是「${target.correct}」`;
+    else if(current.type==='C') extra = `${target.left} + ${target.right}`;
+    else extra = `「${target.w}」`;
+    const meaning = target.m || '';
+    fb.innerHTML = `✅ 答对了！${extra}` + (meaning ? `<span class="meaning">意思：${meaning}</span>` : '');
+    actionBtn.classList.add('ok');
+  } else {
+    streak = 0;
+    playWrongSound();
+    fb.classList.add('no'); fb.classList.remove('ok');
+    let correctDisplay = target.w || '';
+    if(current.type==='A') correctDisplay = target.py;
+    else if(current.type==='H'||current.type==='C') correctDisplay = current.correctVal;
+    else if(current.type==='D') correctDisplay = target.chunks.join('');
+    else if(current.type==='F') correctDisplay = target.correct;
+    const meaning = target.m || '';
+    fb.innerHTML = `❌ 再想想～ 正确答案是「${correctDisplay}」` + (meaning ? `<span class="meaning">${meaning}</span>` : '');
+    actionBtn.classList.add('no');
+  }
+  fb.classList.add('show');
+  actionBtn.textContent = '继续 →';
+  actionBtn.disabled = false;
+
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('totalNum').textContent = total;
+  document.getElementById('streakNum').textContent = streak;
+  renderConstellation();
+}
+
+document.getElementById('actionBtn').onclick = doCheck;
+document.getElementById('skipBtn').onclick = nextQuestion;
+
+/* ============================================================
+   Init
+   ============================================================ */
+renderLessonSelect();
+renderDiffRow();
+renderConstellation();
+loadStats();
+nextQuestion();
+</script>
+</body>
+</html>

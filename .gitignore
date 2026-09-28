@@ -1,0 +1,4 @@
+.DS_Store
+_pdf_preview/
+.pydeps/
+*.pdf
